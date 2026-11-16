@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mateus Santos</title>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: blocos de vidro 3D ficam fixos atrás da página e se reorganizam a cada seção.
+     Ao fundo, um vale em arame (só arestas e vértices) que a página atravessa ao rolar.
+     O conteúdo vive em painéis de vidro fosco que alternam de lado; os blocos ocupam o lado livre.
+     Tema único, escuro. */
+  --void: #000000;
+  --gelo: #f1f3fc;
+  --texto: #cdd1e4;
+  --aco: #979db4;
+  --azul: #7f97ff;
+  --violeta: #b18cff;
+  --ciano: #7ef0ff;
+  --brasa: #ff5a3c;
+  --vidro: linear-gradient(135deg, rgba(255,255,255,.11), rgba(255,255,255,.03) 42%, rgba(255,255,255,.06));
+  --borda: rgba(255, 255, 255, .17);
+  --fio: rgba(255, 255, 255, .12);
+  --serifa: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --calha: clamp(18px, 5vw, 64px);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--void); scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-snap-type: y mandatory; }
+body {
+  margin: 0; background: var(--void); color: var(--texto);
+  font-family: var(--sans); font-size: 17px; line-height: 1.62;
+  overflow-x: hidden; -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ciano); outline-offset: 4px; border-radius: 8px; }
+::selection { background: var(--violeta); color: #000; }
+
+/* ---------- fundo: manchas de luz para o vidro desfocar ---------- */
+.atmosfera {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(36vw 36vw at 75% 14%, rgba(58, 86, 255, .30), transparent 70%),
+    radial-gradient(30vw 30vw at 8% 70%, rgba(150, 92, 255, .22), transparent 70%),
+    radial-gradient(24vw 24vw at 76% 80%, rgba(60, 200, 255, .13), transparent 70%);
+}
+
+#cena {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none; display: block;
+  opacity: 0; transition: opacity 1.6s ease;
+}
+.sem3d #cena { display: none; }
+
+/* filtro entre o 3D e o conteúdo, na página inteira: escurece o lado onde está o texto da seção atual */
+.filtro { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: rgba(0,0,0,.14); }
+.filtro::before, .filtro::after { content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity 1.1s ease; }
+.filtro::before { background: linear-gradient(90deg, rgba(0,0,0,.62), rgba(0,0,0,.35) 45%, rgba(0,0,0,0) 72%); }
+.filtro::after { background: linear-gradient(270deg, rgba(0,0,0,.62), rgba(0,0,0,.35) 45%, rgba(0,0,0,0) 72%); }
+.filtro.esq::before, .filtro.dir::after { opacity: 1; }
+.filtro.centro::before, .filtro.centro::after { opacity: .6; }
+@media (max-width: 860px) { .filtro::before, .filtro::after, .filtro.esq::before, .filtro.dir::after { opacity: .75; } }
+
+/* ---------- vidro ---------- */
+.vidro {
+  position: relative;
+  background: var(--vidro);
+  -webkit-backdrop-filter: blur(16px) saturate(150%); backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid var(--borda);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.30), inset 0 -1px 0 rgba(255,255,255,.05), 0 40px 90px -40px rgba(0,0,0,.9);
+}
+
+/* ---------- navegação ---------- */
+.topo { position: fixed; top: 14px; left: 0; right: 0; z-index: 20; display: flex; justify-content: center; padding-inline: var(--calha); pointer-events: none; }
+.barra {
+  pointer-events: auto; width: min(1120px, 100%);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 8px 8px 8px 24px; border-radius: 999px;
+}
+.marca { font-family: var(--serifa); font-size: 21px; color: var(--gelo); text-decoration: none; }
+.menu { display: flex; gap: clamp(12px, 2vw, 28px); align-items: center; }
+.menu a { font-size: 14px; color: var(--aco); text-decoration: none; transition: color .25s; }
+.menu a:hover, .menu a[aria-current="true"] { color: var(--gelo); }
+.menu a.falar, .menu a.falar[aria-current="true"] { color: #000; }
+.menu .falar { background: var(--gelo); border-radius: 999px; padding: 8px 18px; font-weight: 600; }
+.menu .falar:hover { background: #fff; color: #000; }
+
+.trilha {
+  position: fixed; right: 18px; top: 50%; transform: translateY(-50%); z-index: 20;
+  display: flex; flex-direction: column; align-items: center; gap: 13px;
+  padding: 15px 9px; border-radius: 999px;
+}
+.trilha a {
+  position: relative; display: block; width: 8px; height: 8px; border-radius: 999px;
+  background: rgba(255,255,255,.3);
+  transition: height .45s cubic-bezier(.2,.7,.1,1), background .3s, box-shadow .3s;
+}
+.trilha a::after { content: ""; position: absolute; inset: -6px -8px; }
+.trilha a:hover { background: rgba(255,255,255,.7); }
+.trilha a[aria-current="true"] { height: 24px; background: var(--gelo); box-shadow: 0 0 14px 2px rgba(127,151,255,.75); }
+.trilha a span {
+  position: absolute; right: calc(100% + 22px); top: 50%;
+  transform: translate(8px, -50%); white-space: nowrap; pointer-events: none;
+  padding: 6px 14px; border-radius: 999px; font-size: 13px; line-height: 1.2; color: var(--gelo);
+  background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+  -webkit-backdrop-filter: blur(12px) saturate(150%); backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--borda); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 10px 30px -12px rgba(0,0,0,.8);
+  opacity: 0; transition: opacity .3s, transform .4s cubic-bezier(.2,.7,.1,1);
+}
+.trilha a:hover span, .trilha a:focus-visible span, .trilha.rolando a[aria-current="true"] span { opacity: 1; transform: translate(0, -50%); }
+
+/* ---------- estrutura ---------- */
+main { position: relative; z-index: 1; }
+/* snap: cada seção ocupa a tela e a rolagem para no início dela */
+.sec { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; padding-block: clamp(96px, 13vh, 140px) clamp(56px, 9vh, 100px); scroll-snap-align: start; scroll-snap-stop: always; }
+.sec > .cerca { width: 100%; }
+.cerca { max-width: 1240px; margin-inline: auto; padding-inline: var(--calha); }
+.col { width: min(580px, 100%); display: flex; flex-direction: column; gap: 22px; }
+.col.larga { width: min(660px, 100%); }
+.painel { padding: clamp(26px, 3.4vw, 46px); border-radius: 30px; }
+.lado-dir .col { margin-left: auto; }
+.col p { margin: 0; max-width: 62ch; }
+
+h1, h2, h3 { margin: 0; color: var(--gelo); font-weight: 400; text-wrap: balance; }
+h2 { font-family: var(--serifa); font-size: clamp(34px, 4.2vw, 58px); line-height: 1.03; letter-spacing: -.005em; }
+h3 { font-family: var(--serifa); font-size: 30px; line-height: 1.08; }
+.apoio { color: var(--aco); font-size: 15px; }
+.fill { color: var(--brasa); border-bottom: 1px dashed currentColor; }
+
+/* ---------- abertura ---------- */
+
+.abre .col { width: min(860px, 100%); gap: 30px; }
+.titulo { display: flex; flex-direction: column; }
+.titulo .ln { display: block; overflow: hidden; padding: .1em .12em .14em 0; margin-bottom: -.2em; }
+.titulo .ln > span { display: block; animation: sobe 1s cubic-bezier(.2,.7,.1,1) both; animation-delay: calc(var(--i) * 130ms + 200ms); }
+.titulo .cursiva { font-family: var(--serifa); font-style: italic; font-size: clamp(34px, 5.4vw, 82px); line-height: 1; margin-bottom: .06em; }
+.titulo .bloco { font-family: var(--sans); font-stretch: 62%; font-weight: 800; text-transform: uppercase; font-size: clamp(38px, 6vw, 90px); line-height: .96; letter-spacing: .004em; }
+@keyframes sobe { from { transform: translateY(108%); } }
+.lede { font-size: clamp(17px, 1.5vw, 20px); max-width: 52ch; margin: 0; animation: surge 1.2s ease 800ms both; }
+.acoes { display: flex; flex-wrap: wrap; gap: 14px; animation: surge 1.2s ease 950ms both; }
+.legenda { animation: surge 1.2s ease 1150ms both; max-width: 46ch; margin: 0; }
+@keyframes surge { from { opacity: 0; transform: translateY(14px); } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 13px 26px; border-radius: 999px; font-size: 15px; font-weight: 600; text-decoration: none; color: var(--gelo);
+  transition: background .25s, color .25s, transform .25s, box-shadow .25s;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn.cheio { background: var(--gelo); color: #000; box-shadow: 0 10px 40px -10px rgba(127,151,255,.7); }
+.btn.cheio:hover { background: #fff; }
+
+/* ---------- experiência ---------- */
+.cargo { display: flex; flex-direction: column; gap: 4px; }
+.cargo strong { color: var(--gelo); font-weight: 600; }
+.feitos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.feitos li { padding: 10px 0; border-top: 1px solid var(--fio); }
+.feitos li:last-child { border-bottom: 1px solid var(--fio); }
+
+/* ---------- projetos ---------- */
+.projetos .cab { margin-bottom: 40px; display: flex; flex-direction: column; gap: 14px; }
+.projetos .cab p { margin: 0; max-width: 60ch; }
+.grade { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 18px; }
+.cx { display: flex; }
+.cartao {
+  flex: 1; display: flex; flex-direction: column; gap: 16px;
+  padding: 30px 28px 26px; min-height: 300px; border-radius: 26px;
+  transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform .5s cubic-bezier(.2,.7,.1,1), border-color .3s;
+  overflow: hidden;
+}
+.cartao::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.16), transparent 60%);
+}
+.cartao:hover { border-color: rgba(255,255,255,.4); }
+.cartao:hover::before { opacity: 1; }
+
+.cartao p { margin: 0; }
+.cartao .pe { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.etq { font-size: 13px; color: var(--gelo); background: rgba(255,255,255,.07); border: 1px solid var(--fio); border-radius: 999px; padding: 4px 12px; }
+.etq.fill { color: var(--brasa); border-style: dashed; border-color: currentColor; }
+.estado { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gelo); }
+.estado::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ciano); box-shadow: 0 0 10px var(--ciano); animation: pulsa 2.2s ease-in-out infinite; }
+@keyframes pulsa { 50% { opacity: .35; } }
+
+/* ---------- habilidades ---------- */
+.saberes { margin: 0; display: flex; flex-direction: column; }
+.saberes div { display: grid; grid-template-columns: 140px 1fr; gap: 18px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--fio); }
+.saberes div:last-child { border-bottom: 1px solid var(--fio); }
+.saberes dt { color: var(--aco); font-size: 15px; }
+.saberes dd { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- diferencial ---------- */
+.marcos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.marcos li { font-family: var(--serifa); font-size: clamp(23px, 2.4vw, 31px); line-height: 1.15; color: var(--gelo); }
+
+/* ---------- contato ---------- */
+.fecha { text-align: center; }
+.fecha .col { width: min(640px, 100%); margin-inline: auto; align-items: center; gap: 24px; }
+.fecha h2 { font-style: italic; font-size: clamp(50px, 7.4vw, 104px); line-height: .95; }
+.contatos { list-style: none; margin: 6px 0 0; padding: 0; width: 100%; text-align: left; }
+.contatos li { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid var(--fio); }
+.contatos li:last-child { border-bottom: 1px solid var(--fio); }
+.contatos .rot { color: var(--aco); font-size: 15px; }
+.contatos .val { color: var(--gelo); overflow-wrap: anywhere; }
+a.val { text-decoration: none; background-image: linear-gradient(currentColor, currentColor); background-size: 0 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size .35s ease, color .25s; }
+a.val:hover, a.val:focus-visible { background-size: 100% 1px; color: #fff; }
+
+.rodape { scroll-snap-align: end; position: relative; z-index: 1; padding: 28px var(--calha) 36px; color: var(--aco); font-size: 14px; text-align: center; }
+
+/* ---------- transições de seção ---------- */
+.js .rv {
+  opacity: .1; transform: translateY(38px) scale(.965);
+  transition: opacity 1s ease, transform 1.1s cubic-bezier(.2,.7,.1,1);
+}
+.js .rv.in { opacity: 1; transform: none; }
+.js .cartao.rv { transform: perspective(1100px) translateY(38px) scale(.965); transition: opacity 1s ease, transform 1.1s cubic-bezier(.2,.7,.1,1), border-color .3s; }
+.js .cartao.rv.in { transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: opacity 1s ease, transform .5s cubic-bezier(.2,.7,.1,1), border-color .3s; }
+.js .cartao.rv.ativo { transition: opacity 1s ease, transform .08s linear, border-color .3s; }
+
+/* ---------- telas menores ---------- */
+@media (max-width: 980px) {
+  .grade { grid-template-columns: 1fr 1fr; }
+  .grade .cx:first-child { grid-column: 1 / -1; }
+  .grade .cx:first-child .cartao { min-height: 0; }
+  .trilha { display: none; }
+}
+@media (max-width: 860px) {
+  html { scroll-snap-type: y proximity; }
+  .sec { scroll-snap-stop: normal; }
+  .menu a:not(.falar) { display: none; }
+  .lado-dir .col { margin-left: 0; }
+  .painel { border-radius: 24px; }
+}
+@media (max-width: 620px) {
+  .grade { grid-template-columns: 1fr; }
+  .cartao { min-height: 0; }
+  .saberes div { grid-template-columns: 1fr; gap: 8px; }
+  .contatos li { grid-template-columns: 1fr; gap: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; scroll-snap-type: y proximity; }
+  .titulo .ln > span, .lede, .acoes, .legenda, .estado::before { animation: none; }
+  .js .rv, .js .cartao.rv, .js .cartao.rv.in { opacity: 1; transform: none; transition: none; }
+  .cartao { transform: none; transition: none; }
+  #cena { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosfera" aria-hidden="true"></div>
+<canvas id="cena" aria-hidden="true"></canvas>
+<div class="filtro esq" aria-hidden="true"></div>
+
+<header class="topo">
+  <div class="barra vidro">
+    <a class="marca" href="#topo">Mateus Santos</a>
+    <nav class="menu" aria-label="Principal">
+      <a href="#sobre">Sobre</a>
+      <a href="#experiencia">Experiência</a>
+      <a href="#projetos">Projetos</a>
+      <a href="#habilidades">Habilidades</a>
+      <a href="#diferencial">Diferencial</a>
+      <a class="falar" href="#contato">Falar comigo</a>
+    </nav>
+  </div>
+</header>
+
+<nav class="trilha vidro" aria-label="Seções da página">
+  <a href="#topo"><span>Início</span></a>
+  <a href="#sobre"><span>Sobre</span></a>
+  <a href="#experiencia"><span>Experiência</span></a>
+  <a href="#projetos"><span>Projetos</span></a>
+  <a href="#habilidades"><span>Habilidades</span></a>
+  <a href="#diferencial"><span>Diferencial</span></a>
+  <a href="#contato"><span>Contato</span></a>
+</nav>
+
+<main>
+
+  <!-- HOOK -->
+  <section class="sec abre" id="topo" data-forma="cubo">
+    <div class="cerca">
+      <div class="col">
+        <h1 class="titulo">
+          <span class="ln" style="--i:0"><span class="cursiva">Sou movido pela curiosidade</span></span>
+          <span class="ln" style="--i:1"><span class="bloco">e pela vontade</span></span>
+          <span class="ln" style="--i:2"><span class="bloco">de fazer melhor</span></span>
+          <span class="ln" style="--i:3"><span class="bloco">a cada projeto.</span></span>
+        </h1>
+        <p class="lede">Sou Mateus Santos. Atualmente, atuo como Quality Assurance na FUNDECC, em um convênio com o Instituto Mineiro de Agropecuária. Tenho experiência com a Teoria dos Grafos aplicada à programação e com o desenvolvimento de APIs em Spring Boot e PostgreSQL.</p>
+        <div class="acoes">
+          <a class="btn cheio" href="#contato">Falar comigo</a>
+          <a class="btn vidro" href="#projetos">Ver projetos</a>
+        </div>
+        <p class="apoio legenda">Role a página: os blocos se reorganizam a cada seção.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DESENVOLVIMENTO -->
+  <section class="sec lado-dir" id="sobre" data-forma="explode">
+    <div class="cerca">
+      <div class="col painel vidro rv">
+        <h2>O Caminho</h2>
+        <!-- Jornada do herói: mundo comum, chamado, mentor e travessia -->
+        <p>Tudo começou numa escola pública, com uma prova de matemática. A medalha de bronze nacional na OBMEP me mostrou que eu gostava dos problemas difíceis, aqueles que não se resolvem na primeira tentativa.</p>
+        <p>A medalha abriu a porta do Programa de Iniciação Científica Jr. do IMPA. Foram dois anos estudando matemática a fundo e aprendendo a não aceitar nenhuma afirmação sem prova. Levo esse hábito comigo até hoje.</p>
+        <p>Da matemática, atravessei para a programação. Aprendi Java, C, C++ e Haskell, e encontrei na Teoria dos Grafos o ponto onde os dois mundos se cruzam: rotas, dependências e fluxos de sistema são, no fundo, grafos.</p>
+        <p class="apoio">Estudante de Ciência da Computação na Universidade Federal de Lavras (UFLA).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="experiencia" data-forma="helice">
+    <div class="cerca">
+      <div class="col painel vidro rv">
+        <h2>Onde trabalho hoje</h2>
+        <!-- Jornada do herói: provações -->
+        <p>O primeiro grande teste veio no trabalho. No convênio entre a FUNDECC e o Instituto Mineiro de Agropecuária, minha missão é encontrar o que pode dar errado nos sistemas antes que chegue a quem usa.</p>
+        <div class="cargo">
+          <strong>Tester e Quality Assurance</strong>
+          <span class="apoio">Lavras, MG. De julho de 2026 até hoje.</span>
+        </div>
+        <ul class="feitos">
+          <li>Testes funcionais dos sistemas desenvolvidos no convênio</li>
+          <li>Testes de API com Postman</li>
+          <li>Registro e acompanhamento de defeitos com o time de desenvolvimento</li>
+          <li>Trabalho em time ágil</li>
+        </ul>
+        <p>Cada defeito encontrado me ensina como o código falha. É esse aprendizado que levo para tudo o que desenvolvo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec projetos" id="projetos" data-forma="longe">
+    <div class="cerca">
+      <!-- Jornada do herói: entrar na caverna, construir e passar adiante -->
+      <div class="cab rv">
+        <h2>Projetos</h2>
+        <p>Saber testar não bastava: eu queria construir. Nestes projetos eu coloco a mão no código e também passo adiante o que aprendi.</p>
+      </div>
+      <div class="grade">
+        <div class="cx">
+          <article class="cartao vidro rv">
+            <span class="estado">Em desenvolvimento</span>
+            <h3>SisLar</h3>
+            <p>Sistema que estou ajudando a criar, onde aplico na prática o que aprendi testando. <span class="fill">Descreva o problema que o SisLar resolve, para quem, e o que você desenvolveu nele.</span></p>
+            <div class="pe"><span class="etq fill">stack</span></div>
+          </article>
+        </div>
+        <div class="cx">
+          <article class="cartao vidro rv" data-d="110">
+            <h3>Programação Básica para Todos</h3>
+            <p>Aqui o caminho se inverte: produzo o material das aulas de programação para quem está começando.</p>
+            <div class="pe"><span class="etq">Material didático</span><span class="etq">Lógica de programação</span></div>
+          </article>
+        </div>
+        <div class="cx">
+          <article class="cartao vidro rv" data-d="220">
+            <span class="estado">Em desenvolvimento</span>
+            <h3>Bolsista FUNDECC</h3>
+            <p>Bolsista no Gedai, o Laboratório de Geoprocessamento, Ciência de Dados e Inteligência Artificial. O laboratório nasceu da parceria entre o IMA e a UFLA para fortalecer a defesa sanitária agropecuária de Minas Gerais.</p>
+            <div class="pe"><span class="etq">Gedai</span><span class="etq">FUNDECC</span><span class="etq">UFLA</span><span class="etq">IMA</span></div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="habilidades" data-forma="camadas">
+    <div class="cerca">
+      <div class="col larga painel vidro rv">
+        <h2>Minha stack</h2>
+        <!-- Jornada do herói: recompensa -->
+        <p>As ferramentas que fui reunindo pelo caminho. Uso IA no dia a dia para desenvolver mais rápido, sem abrir mão da qualidade.</p>
+        <dl class="saberes">
+          <div><dt>Linguagens</dt><dd><span class="etq">Java</span><span class="etq">C</span><span class="etq">C++</span><span class="etq">Haskell</span></dd></div>
+          <div><dt>Back-end</dt><dd><span class="etq">Spring Boot</span></dd></div>
+          <div><dt>Banco de dados</dt><dd><span class="etq">PostgreSQL</span><span class="etq">SQL</span></dd></div>
+          <div><dt>APIs</dt><dd><span class="etq">Postman</span></dd></div>
+          <div><dt>Testes</dt><dd><span class="etq">Testes funcionais</span><span class="etq">Testes de API</span><span class="etq">Registro de defeitos</span></dd></div>
+          <div><dt>Processo</dt><dd><span class="etq">Metodologias ágeis</span></dd></div>
+          <div><dt>IA</dt><dd><span class="etq">Desenvolvimento assistido por IA</span></dd></div>
+          <div><dt>Fundamentos</dt><dd><span class="etq">Teoria dos grafos</span><span class="etq">Lógica</span><span class="etq">Resolução de problemas</span></dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="diferencial" data-forma="piramide">
+    <div class="cerca">
+      <div class="col painel vidro rv">
+        <h2>Matemática por trás do código</h2>
+        <ul class="marcos">
+          <li>Bronze nacional na OBMEP <span class="fill">ano</span></li>
+          <li>Dois anos de iniciação científica no IMPA</li>
+          <li>Teoria dos Grafos na graduação</li>
+        </ul>
+        <!-- Jornada do herói: transformação -->
+        <p>Olhando para trás, a olimpíada e o código fazem parte da mesma jornada. A matemática me ensinou a quebrar um problema grande em partes, achar o caso que ninguém previu e provar que a solução funciona. Hoje eu faço isso escrevendo software.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="sec fecha" id="contato" data-forma="halo">
+    <div class="cerca">
+      <div class="col painel vidro rv">
+        <h2>Vamos conversar</h2>
+        <!-- Jornada do herói: retorno com o elixir -->
+        <p>Hoje levo tudo isso para o time de desenvolvimento em que trabalho, e estou aberto a novos projetos e desafios. Se você tem uma ideia ou um projeto em mente, vou gostar de ouvir.</p>
+        <ul class="contatos">
+          <li><span class="rot">LinkedIn</span><a class="val" href="https://www.linkedin.com/in/mateus-santos-562807352/" target="_blank" rel="noopener">linkedin.com/in/mateus-santos-562807352</a></li>
+          <li><span class="rot">GitHub</span><a class="val" href="https://github.com/MateusNogSantos" target="_blank" rel="noopener">github.com/MateusNogSantos</a></li>
+          <li><span class="rot">E-mail</span><a class="val" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mateus.santos7%40estudante.ufla.br&amp;su=Contato&amp;body=Ol%C3%A1%2C%20Mateus%21%20Tudo%20bem%3F%20Gostaria%20de%20entrar%20em%20contato%20com%20voc%C3%AA." target="_blank" rel="noopener">mateus.santos7@estudante.ufla.br</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="rodape">© 2026 Mateus Santos</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var doc = document.documentElement;
+  var reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function semente(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var rnd = semente(7);
+
+  /* ================= entrada das seções ================= */
+  var rvs = [].slice.call(document.querySelectorAll('.rv'));
+  if (reduz || !('IntersectionObserver' in window)) {
+    rvs.forEach(function (el) { el.classList.add('in'); });
+  } else {
+    var obs = new IntersectionObserver(function (itens) {
+      itens.forEach(function (it) { if (it.isIntersecting) { var el = it.target; obs.unobserve(el); window.setTimeout(function () { el.classList.add('in'); }, parseInt(el.getAttribute('data-d') || '0', 10)); } });
+    }, { threshold: .1, rootMargin: '0px 0px -6% 0px' });
+    rvs.forEach(function (el) { obs.observe(el); });
+  }
+
+  /* ================= cartões com inclinação 3D ================= */
+  if (!reduz && window.matchMedia('(hover: hover)').matches) {
+    [].forEach.call(document.querySelectorAll('.cartao'), function (c) {
+      c.addEventListener('pointermove', function (ev) {
+        var r = c.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width, py = (ev.clientY - r.top) / r.height;
+        c.classList.add('ativo');
+        c.style.setProperty('--rx', ((.5 - py) * 10).toFixed(2) + 'deg');
+        c.style.setProperty('--ry', ((px - .5) * 12).toFixed(2) + 'deg');
+        c.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+        c.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+      });
+      c.addEventListener('pointerleave', function () {
+        c.classList.remove('ativo'); c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg');
+      });
+    });
+  }
+
+  /* ================= seções e trilha ================= */
+  var secoes = [].slice.call(document.querySelectorAll('[data-forma]'));
+  var trilha = [].slice.call(document.querySelectorAll('.trilha a'));
+  // o nome da seção só aparece enquanto a página está rolando
+  var trilhaEl = document.querySelector('.trilha'), tmRol = 0;
+  window.addEventListener('scroll', function () {
+    trilhaEl.classList.add('rolando');
+    window.clearTimeout(tmRol);
+    tmRol = window.setTimeout(function () { trilhaEl.classList.remove('rolando'); }, 900);
+  }, { passive: true });
+  var menu = [].slice.call(document.querySelectorAll('.menu a'));
+  var centros = [];
+  function mede() { centros = secoes.map(function (s) { var r = s.getBoundingClientRect(); return r.top + window.scrollY + r.height / 2; }); }
+  var atual = -1;
+  var filtro = document.querySelector('.filtro');
+  function marca(idx) {
+    if (idx === atual) return; atual = idx;
+    var sec = secoes[idx];
+    filtro.className = 'filtro ' + (sec.classList.contains('lado-dir') ? 'dir' : (sec.classList.contains('projetos') || sec.classList.contains('fecha')) ? 'centro' : 'esq');
+    trilha.forEach(function (a, n) { if (n === idx) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+    var id = '#' + secoes[idx].id;
+    menu.forEach(function (a) { if (a.getAttribute('href') === id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+  }
+  function suave(a, b, x) { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); }
+  function progresso() {
+    var p = window.scrollY + window.innerHeight * .5, n = centros.length;
+    if (p <= centros[0]) return { i: 0, s: 0 };
+    if (p >= centros[n - 1]) return { i: n - 2, s: 1 };
+    for (var q = 0; q < n - 1; q++) if (p < centros[q + 1]) return { i: q, s: suave(.22, .78, (p - centros[q]) / (centros[q + 1] - centros[q])) };
+    return { i: n - 2, s: 1 };
+  }
+  mede();
+  (function () { var pr = progresso(); marca(pr.s < .5 ? pr.i : pr.i + 1); })();
+
+  /* ================= cena 3D ================= */
+  var T = window.THREE, canvas = document.getElementById('cena'), render;
+  if (T) { try { render = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); } catch (err) { render = null; } }
+  if (!render) {
+    doc.classList.add('sem3d');
+    window.addEventListener('scroll', function () { var pr = progresso(); marca(pr.s < .5 ? pr.i : pr.i + 1); }, { passive: true });
+    window.addEventListener('resize', mede);
+    return;
+  }
+
+  // resolução adaptativa: começa alta e só baixa se o computador não aguentar 45 quadros por segundo
+  var dprMax = Math.min(Math.max(window.devicePixelRatio || 1, 1.25), 2), dpr = dprMax, teto = dprMax;
+  render.setPixelRatio(dpr);
+  render.outputEncoding = T.sRGBEncoding;
+  render.toneMapping = T.ACESFilmicToneMapping;
+  render.toneMappingExposure = 1.15;
+  render.setClearColor(0x000000, 0);
+
+  var cena = new T.Scene();
+  var cam = new T.PerspectiveCamera(38, 1, .1, 80);
+  cam.position.set(0, 0, 9);
+
+  // estúdio de luz gerado em código: é o que o vidro reflete
+  (function () {
+    var pm = new T.PMREMGenerator(render), amb = new T.Scene();
+    function painel(cor, forca, w, h, x, y, z) {
+      var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(cor).multiplyScalar(forca), side: T.DoubleSide }));
+      m.position.set(x, y, z); m.lookAt(0, 0, 0); amb.add(m);
+    }
+    painel(0xffffff, 9, 7, 2.2, 0, 8, 3);
+    painel(0x4a66ff, 5, 4, 10, -9, 1, 1);
+    painel(0xb18cff, 5, 3, 9, 9, 0, 2);
+    painel(0x7ef0ff, 4, 9, 1.2, 0, -7, 4);
+    painel(0xffffff, 7, 1, 8, 7, 3, -6);
+    painel(0x2a3cc0, 2, 8, 8, 0, 0, 11);
+    painel(0xffffff, 10, .35, 6, -5, 4, 6);
+    painel(0xdfe6ff, 8, 5, .3, 3, -3, 7);
+    cena.environment = pm.fromScene(amb, 0).texture;
+    pm.dispose();
+  })();
+  var l1 = new T.PointLight(0xbfd0ff, 30, 30); l1.position.set(4, 5, 6); cena.add(l1);
+  var l2 = new T.PointLight(0xb18cff, 18, 30); l2.position.set(-6, -3, 4); cena.add(l2);
+
+  var V = T.Vector3, Q = T.Quaternion;
+  function v(x, y, z) { return new V(x, y, z); }
+  var eixoY = v(0, 1, 0), eixoZ = v(0, 0, 1);
+
+  /* ---- 26 blocos: um cubo 3×3×3 sem o centro, onde fica o núcleo de luz ---- */
+  var celulas = [];
+  for (var gy = 1; gy >= -1; gy--) for (var gz = -1; gz <= 1; gz++) for (var gx = -1; gx <= 1; gx++) if (gx || gy || gz) celulas.push([gx, gy, gz]);
+  var N = celulas.length, PASSO = .66, i;
+  var ident = []; for (i = 0; i < N; i++) ident.push(new Q());
+
+  var F = {}, R = {};
+  F.cubo = celulas.map(function (c) { return v(c[0] * PASSO, c[1] * PASSO, c[2] * PASSO); }); R.cubo = ident;
+  F.explode = celulas.map(function (c) { return v(c[0] * 1.45 + (rnd() - .5) * .7, c[1] * 1.3 + (rnd() - .5) * .7, c[2] * 1.3 + (rnd() - .5) * .7); }); R.explode = ident;
+  F.helice = []; R.helice = [];
+  for (i = 0; i < N; i++) { var ah = i * .62; F.helice.push(v(Math.cos(ah) * 1.25, (i - (N - 1) / 2) * .15, Math.sin(ah) * 1.25)); R.helice.push(new Q().setFromAxisAngle(eixoY, -ah)); }
+  F.longe = celulas.map(function () { return v((rnd() - .5) * 13, (rnd() - .5) * 6.6, -2.5 - rnd() * 4.5); }); R.longe = ident;
+  F.camadas = celulas.map(function (c) { return v(c[0] * PASSO, c[1] * 1.28, c[2] * PASSO); }); R.camadas = ident;
+  // pirâmide em degraus: base 4×4, meio 3×3, topo 1 (16 + 9 + 1 = 26 blocos)
+  F.piramide = []; R.piramide = ident;
+  (function () {
+    var niveis = [[4, -1], [3, 0], [1, 1]];
+    niveis.forEach(function (nv) {
+      var lado = nv[0];
+      for (var a = 0; a < lado; a++) for (var b = 0; b < lado; b++)
+        F.piramide.push(v((a - (lado - 1) / 2) * PASSO, (nv[1] + .45) * PASSO, (b - (lado - 1) / 2) * PASSO));
+    });
+  })();
+  F.halo = []; R.halo = [];
+  for (i = 0; i < N; i++) { var aa = i / N * Math.PI * 2; F.halo.push(v(Math.cos(aa) * 3.7, Math.sin(aa) * 2.6, (i % 2 ? .18 : -.18))); R.halo.push(new Q().setFromAxisAngle(eixoZ, aa)); }
+
+  // por seção: posição, escala, giro, frente (alinha à câmera), inclinação, soltura dos blocos, brilho, roda, núcleo
+  var CFG = {
+    cubo: { x: 3.05, y: .05, z: 0, e: .92, giro: 1, frente: 0, incl: .52, solto: 0, luz: 1, roda: 0, orbe: 1 },
+    explode: { x: -2.75, y: 0, z: 0, e: .95, giro: .7, frente: 0, incl: .3, solto: 1, luz: 1, roda: 0, orbe: 1.7 },
+    helice: { x: 2.75, y: 0, z: 0, e: 1, giro: 1.5, frente: 0, incl: .16, solto: 0, luz: 1, roda: 0, orbe: 1.25 },
+    longe: { x: 0, y: 0, z: 0, e: 1, giro: .1, frente: 0, incl: 0, solto: 1, luz: .6, roda: 0, orbe: .7 },
+    camadas: { x: 2.8, y: 0, z: 0, e: 1.05, giro: .55, frente: 0, incl: .34, solto: 0, luz: 1, roda: 0, orbe: 1 },
+    piramide: { x: 2.7, y: -.1, z: 0, e: 1.15, giro: .7, frente: 0, incl: .42, solto: 0, luz: 1, roda: 0, orbe: .6 },
+    halo: { x: 0, y: 0, z: -.6, e: 1, giro: 0, frente: 1, incl: 0, solto: 0, luz: .7, roda: 1, orbe: 0 }
+  };
+  var CHAVES = ['x', 'y', 'z', 'e', 'giro', 'frente', 'incl', 'solto', 'luz', 'roda', 'orbe'];
+  var formas = secoes.map(function (s) { return s.getAttribute('data-forma'); });
+
+  /* ---- bloco de vidro com cantos chanfrados ---- */
+  function geoBloco(s, b) {
+    var h = s / 2 - b, r = b * .9, sh = new T.Shape();
+    sh.moveTo(-h + r, -h); sh.lineTo(h - r, -h); sh.quadraticCurveTo(h, -h, h, -h + r);
+    sh.lineTo(h, h - r); sh.quadraticCurveTo(h, h, h - r, h);
+    sh.lineTo(-h + r, h); sh.quadraticCurveTo(-h, h, -h, h - r);
+    sh.lineTo(-h, -h + r); sh.quadraticCurveTo(-h, -h, -h + r, -h);
+    var g = new T.ExtrudeGeometry(sh, { depth: s - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 12, curveSegments: 20 });
+    g.center(); return g;
+  }
+  var matVidro = new T.MeshPhysicalMaterial({
+    precision: 'highp',
+    color: 0xffffff, metalness: 0, roughness: .23,
+    transmission: 1, thickness: .89, ior: 1.46,
+    attenuationColor: new T.Color(0x9fb2ff), attenuationDistance: 1.74,
+    clearcoat: .84, clearcoatRoughness: .18,
+    iridescence: .85, iridescenceIOR: 1.32, iridescenceThicknessRange: [180, 520],
+    envMapIntensity: 1.35, specularIntensity: 1
+  });
+  var grupo = new T.Group(); cena.add(grupo);
+  var blocos = new T.InstancedMesh(geoBloco(.58, .06), matVidro, N);
+  blocos.frustumCulled = false; grupo.add(blocos);
+
+  // núcleo de luz: é ele que o vidro refrata
+  // núcleo: a cor sai da posição 3D de cada vértice, não de uma textura,
+  // então não existe emenda nem polo onde as cores se juntam
+  var nucleo = (function () {
+    var geo = new T.SphereGeometry(.27, 96, 72), P = geo.attributes.position, cor = new Float32Array(P.count * 3);
+    var pal = [[126, 240, 255], [95, 124, 255], [177, 140, 255], [255, 143, 208]], tc = new T.Color();
+    for (var n = 0; n < P.count; n++) {
+      var x = P.getX(n) / .27, y = P.getY(n) / .27, z = P.getZ(n) / .27;
+      var t = (1.15 * x + .85 * y + .55 * z + .3 * Math.sin(2.6 * y + 1.7 * x) + 3) * .8;
+      t = ((t % pal.length) + pal.length) % pal.length;
+      var a = Math.floor(t), f = t - a; f = f * f * (3 - 2 * f);
+      var A = pal[a], B = pal[(a + 1) % pal.length];
+      tc.setRGB((A[0] + (B[0] - A[0]) * f) / 255, (A[1] + (B[1] - A[1]) * f) / 255, (A[2] + (B[2] - A[2]) * f) / 255).convertSRGBToLinear();
+      cor[n * 3] = tc.r; cor[n * 3 + 1] = tc.g; cor[n * 3 + 2] = tc.b;
+    }
+    geo.setAttribute('color', new T.BufferAttribute(cor, 3));
+    var m = new T.Mesh(geo, new T.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
+    grupo.add(m); return m;
+  })();
+  function texturaBrilho() {
+    var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d');
+    var gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(190,200,255,.9)'); gr.addColorStop(.25, 'rgba(130,120,255,.4)'); gr.addColorStop(1, 'rgba(120,110,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new T.CanvasTexture(c);
+  }
+  var brilho = new T.Sprite(new T.SpriteMaterial({ map: texturaBrilho(), blending: T.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false }));
+  grupo.add(brilho);
+
+  /* ---- ambiente 3D: um vale em arame, feito só de arestas e vértices ---- */
+  cena.fog = new T.Fog(0x000000, 11, 46);
+  var mundo = new T.Group(); cena.add(mundo);
+  var CEL = 1.25, COLS = 45, LINS = 50, CHAO = -2.7, Z0 = 11, COMP = LINS * CEL;
+  function altura(x, z) {
+    var ax = Math.abs(x);
+    var serra = Math.pow(Math.max(0, ax - 4.2), 1.25) * .62 * (.62 + .38 * Math.sin(z * .23 + x * .31) * Math.cos(z * .11 - x * .17) + .25 * Math.sin(z * .57 + x * .9));
+    return Math.max(0, serra) + .16 * Math.sin(x * .8 + z * .45) * Math.cos(z * .3);
+  }
+  var tPos = new Float32Array(COLS * LINS * 3), tCor = new Float32Array(COLS * LINS * 3), tIdx = [];
+  (function () {
+    for (var r = 0; r < LINS; r++) for (var c = 0; c < COLS; c++) {
+      var o = (r * COLS + c) * 3; tPos[o] = (c - (COLS - 1) / 2) * CEL; tPos[o + 1] = CHAO; tPos[o + 2] = Z0 - r * CEL;
+      if (c < COLS - 1) tIdx.push(r * COLS + c, r * COLS + c + 1);
+      if (r < LINS - 1) tIdx.push(r * COLS + c, (r + 1) * COLS + c);
+    }
+  })();
+  var aPos = new T.BufferAttribute(tPos, 3), aCor = new T.BufferAttribute(tCor, 3);
+  var gLin = new T.BufferGeometry(); gLin.setAttribute('position', aPos); gLin.setAttribute('color', aCor); gLin.setIndex(tIdx);
+  var gPts = new T.BufferGeometry(); gPts.setAttribute('position', aPos); gPts.setAttribute('color', aCor);
+  var chaoLin = new T.LineSegments(gLin, new T.LineBasicMaterial({ vertexColors: true }));
+  var chaoPts = new T.Points(gPts, new T.PointsMaterial({ vertexColors: true, size: .055, sizeAttenuation: true }));
+  chaoLin.frustumCulled = false; chaoPts.frustumCulled = false; mundo.add(chaoLin); mundo.add(chaoPts);
+  var baseAtual = null;
+  function refazChao(base) {
+    for (var r = 0; r < LINS; r++) for (var c = 0; c < COLS; c++) {
+      var o = (r * COLS + c) * 3, h = altura(tPos[o], tPos[o + 2] - base), t = Math.min(1, Math.max(0, h / 7));
+      tPos[o + 1] = CHAO + h;
+      var perto = .18 + .82 * Math.min(1, Math.max(0, (Z0 - 3 - tPos[o + 2]) / 16));
+      tCor[o] = (.03 + t * .20) * perto; tCor[o + 1] = (.06 + t * .50) * perto; tCor[o + 2] = (.40 + t * .55) * perto;
+    }
+    aPos.needsUpdate = true; aCor.needsUpdate = true;
+  }
+
+  /* ---- estado animado ---- */
+  var pos = [], rot = [], eixo = [], vel = [], ang = [], fase = [];
+  for (i = 0; i < N; i++) {
+    // começam espalhados e se montam ao carregar
+    pos.push(v(F.cubo[i].x * 4.5 + (rnd() - .5) * 3, F.cubo[i].y * 4.5 + (rnd() - .5) * 3, F.cubo[i].z * 4.5 + (rnd() - .5) * 3));
+    rot.push(new Q().setFromAxisAngle(v(rnd() - .5, rnd() - .5, rnd() - .5).normalize(), rnd() * 3));
+    eixo.push(v(rnd() - .5, rnd() - .5, rnd() - .5).normalize()); vel.push(.25 + rnd() * .5); ang.push(0); fase.push(rnd() * 6.283);
+  }
+  var cfg = {}, alvo = {}, estreito = false, opBase = 1, opAtual = -1;
+  var rotY = 0, rotZ = 0, mx = 0, my = 0, mxS = 0, myS = 0, tempo = 0, VOLTA = Math.PI * 2;
+  var m4 = new T.Matrix4(), tv = new V(), tp = new V(), tq = new Q(), tq2 = new Q(), um = v(1, 1, 1);
+
+  function ajusta() {
+    var w = window.innerWidth, h = window.innerHeight;
+    render.setSize(w, h, false);
+    cam.aspect = w / h; cam.updateProjectionMatrix();
+    estreito = w < 860 || cam.aspect < 1;
+    opBase = estreito ? .55 : 1;
+    mede();
+  }
+  function lateral() { return estreito ? 0 : Math.min(1.08, Math.max(.62, cam.aspect / 1.78)); }
+  function calculaAlvo(pr) {
+    var A = CFG[formas[pr.i]], B = CFG[formas[pr.i + 1]], s = pr.s, lat = lateral();
+    CHAVES.forEach(function (c) { alvo[c] = A[c] + (B[c] - A[c]) * s; });
+    alvo.x *= lat;
+    if (estreito) { alvo.e *= .6; alvo.y += .3; }
+  }
+
+  function quadro(dt, direto) {
+    tempo += dt;
+    var pr = progresso(); marca(pr.s < .5 ? pr.i : pr.i + 1);
+    calculaAlvo(pr);
+    var k = direto ? 1 : 1 - Math.exp(-dt * 3.2);
+    CHAVES.forEach(function (c) { cfg[c] = cfg[c] === undefined ? alvo[c] : cfg[c] + (alvo[c] - cfg[c]) * k; });
+
+    mxS += (mx - mxS) * k; myS += (my - myS) * k;
+    rotY += dt * .16 * cfg.giro; rotZ += dt * .05 * cfg.roda;
+    rotY += (Math.round(rotY / VOLTA) * VOLTA - rotY) * cfg.frente * k * .9;
+    rotZ += (Math.round(rotZ / VOLTA) * VOLTA - rotZ) * Math.max(0, 1 - cfg.roda) * k * .9;
+    grupo.position.set(cfg.x, cfg.y, cfg.z);
+    grupo.scale.setScalar(cfg.e);
+    grupo.rotation.set(cfg.incl + myS * .18, rotY + mxS * .3, rotZ);
+
+    var FA = F[formas[pr.i]], FB = F[formas[pr.i + 1]], RA = R[formas[pr.i]], RB = R[formas[pr.i + 1]], n;
+    for (n = 0; n < N; n++) {
+      tv.copy(FA[n]).lerp(FB[n], pr.s);
+      tq.copy(RA[n]).slerp(RB[n], pr.s);
+      if (direto) { pos[n].copy(tv); rot[n].copy(tq); } else { pos[n].lerp(tv, k); rot[n].slerp(tq, k); }
+      ang[n] += dt * vel[n] * cfg.solto;
+      ang[n] += (Math.round(ang[n] / VOLTA) * VOLTA - ang[n]) * Math.max(0, 1 - cfg.solto) * k * .9;
+      tq2.setFromAxisAngle(eixo[n], ang[n]); tq2.premultiply(rot[n]);
+      var f = fase[n], bal = .02 + cfg.solto * .05;
+      tp.set(pos[n].x + Math.sin(tempo * .6 + f) * bal, pos[n].y + Math.cos(tempo * .5 + f * 1.7) * bal, pos[n].z + Math.sin(tempo * .4 + f * .6) * bal);
+      m4.compose(tp, tq2, um); blocos.setMatrixAt(n, m4);
+    }
+    blocos.instanceMatrix.needsUpdate = true;
+
+    var pulso = 1 + Math.sin(tempo * 1.6) * .06, eo = Math.max(.0001, cfg.orbe * pulso);
+    nucleo.scale.setScalar(eo); nucleo.rotation.y = tempo * .5; nucleo.rotation.x = tempo * .23;
+    brilho.scale.set(2.1 * eo, 2.1 * eo, 1);
+    nucleo.visible = brilho.visible = cfg.orbe > .02;
+
+    // ambiente: o vale corre na direção da câmera com o tempo e com a rolagem
+    var viagem = tempo * .55 + window.scrollY / Math.max(1, window.innerHeight) * 7;
+    var desloc = viagem % CEL, base = viagem - desloc;
+    if (base !== baseAtual) { baseAtual = base; refazChao(base); }
+    chaoLin.position.z = chaoPts.position.z = desloc;
+    mundo.rotation.set(myS * .02, mxS * .045, 0);
+
+    var opac = opBase * cfg.luz;
+    if (Math.abs(opac - opAtual) > .004) { opAtual = opac; canvas.style.opacity = opac.toFixed(3); }
+    render.render(cena, cam);
+  }
+
+  ajusta();
+  quadro(0, reduz);
+
+  window.addEventListener('resize', function () { ajusta(); if (reduz) quadro(0, true); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { mede(); });
+  window.addEventListener('load', mede);
+
+  if (reduz) {
+    window.addEventListener('scroll', function () { quadro(0, true); }, { passive: true });
+  } else {
+    window.addEventListener('pointermove', function (ev) { mx = ev.clientX / window.innerWidth * 2 - 1; my = ev.clientY / window.innerHeight * 2 - 1; }, { passive: true });
+    var antes = performance.now(), soma = 0, qtd = 0, pedido = 0;
+    function mudaDpr(novo) { dpr = novo; render.setPixelRatio(dpr); ajusta(); }
+    function laco(agora) {
+      var bruto = (agora - antes) / 1000 || 0, dt = Math.min(.05, bruto); antes = agora;
+      quadro(dt, false);
+      soma += bruto; qtd++;
+      if (qtd === 90) {
+        var media = soma / qtd; soma = 0; qtd = 0;
+        if (media > 1 / 45 && dpr > 1) { teto = Math.max(1, dpr - .25); mudaDpr(teto); }
+        else if (media < 1 / 58 && dpr < teto) mudaDpr(Math.min(teto, dpr + .25));
+      }
+      pedido = window.requestAnimationFrame(laco);
+    }
+    pedido = window.requestAnimationFrame(laco);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { window.cancelAnimationFrame(pedido); }
+      else { antes = performance.now(); soma = 0; qtd = 0; pedido = window.requestAnimationFrame(laco); }
+    });
+  }
+})();
+</script>
+</body>
+</html>
